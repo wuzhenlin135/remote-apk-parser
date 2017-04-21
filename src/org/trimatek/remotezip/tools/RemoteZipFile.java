@@ -125,12 +125,14 @@ public class RemoteZipFile {
 
         URL url = new URL(path);
         long fileLength = readRemoteFileLength(url);
+        if (fileLength <= 0) {
+            throw new RuntimeException("fail read remote file length! ");
+        }
         int currentLength = 256;
-
         while (true) {
-            long beginBytes = fileLength - (currentLength + 22);
+            long startBytes = fileLength - (currentLength + 22);
             HttpURLConnection req = (HttpURLConnection) url.openConnection();
-            req.setRequestProperty("Range", "bytes=" + beginBytes + "-" + fileLength);
+            req.setRequestProperty("Range", "bytes=" + startBytes + "-" + fileLength);
             req.connect();
             logger.log(Level.INFO, "Response Code: " + req.getResponseCode());
             logger.log(Level.INFO, "Content-Length: " + req.getContentLength());
@@ -143,7 +145,7 @@ public class RemoteZipFile {
             req.disconnect();
 
             int pos = endSize - 22;
-            
+
             while (pos >= 0) {
                 if (bb[pos] == 0x50) {
                     if (bb[pos + 1] == 0x4b && bb[pos + 2] == 0x05 && bb[pos + 3] == 0x06) {
@@ -189,9 +191,10 @@ public class RemoteZipFile {
             if (respCode == 200) {
                 Map<String, String> repHeader = getHttpResponseHeader(conn);
                 String acceptRanges = repHeader.get("Accept-Ranges");
-                if (acceptRanges == null) {
-                    throw new UnsupportedOperationException("remote file not support ranges");
-                }
+                // if (acceptRanges == null) {
+                // throw new
+                // UnsupportedOperationException("remote file not support ranges");
+                // }
                 fileLength = Long.parseLong(repHeader.get("Content-Length"));
             }
         } catch (IOException e) {
